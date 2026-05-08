@@ -68,6 +68,16 @@ Run full pipeline (train + evaluate):
 python main.py full
 ```
 
+## Cross-Validation
+
+The project includes a 4-fold cross-validation workflow to improve model robustness and reduce sensitivity to a single train/validation split.
+
+- Implemented in `src/cross_val.py`
+- Uses the four partition files in `data/cross_val_data/`
+- Each fold trains on three partitions and validates on the remaining partition
+- Produces cross-validated validation metrics across all four folds
+- Helps estimate model performance more reliably than a single hold-out set
+
 ### Jupyter Notebooks
 
 Open the notebooks for interactive exploration:
@@ -77,34 +87,26 @@ Open the notebooks for interactive exploration:
 
 ## Model Architecture
 
-The model is a deep neural network implemented in PyTorch (see [src/module.py](src/module.py)). It uses a progressively expanding and then contracting architecture with batch normalization for regularization.
+The model is a deep neural network implemented in PyTorch (see [src/module.py](src/module.py)). It uses a compact encoder-style architecture with two wide hidden layers and batch normalization.
 
 ### Network Layers
 
-The model takes 11 input features (after dropping 'Status' and 'Complains' in preprocessing).
+The model takes 13 input features (all features including 'Status' and 'Complains'). Total trainable parameters: **138,811**.
 
 | Layer | Input | Output | Activation | BatchNorm |
 |-------|-------|--------|------------|-----------|
-| layer1 | 11 | 30 | Hardswish | Yes |
-| layer2 | 30 | 60 | ReLU | Yes |
-| layer3 | 60 | 90 | Hardswish | Yes |
-| layer4 | 90 | 64 | - | Yes |
-| layer5 | 64 | 256 | Sigmoid | Yes |
-| layer6 | 256 | 64 | Hardswish | Yes |
-| layer7 | 64 | 256 | - | Yes |
-| layer8 | 256 | 512 | ReLU | Yes |
-| layer9 | 512 | 128 | Hardswish | Yes |
-| layer10 | 128 | 1 | Sigmoid | - |
-
-Total parameters: ~1.2M
+| layer1 | 13 | 30 | LeakyReLU | - |
+| layer2 | 30 | 1024 | LeakyReLU | Yes |
+| layer3 | 1024 | 50 | LeakyReLU | Yes |
+| layer4 | 50 | 1024 | LeakyReLU | - |
+| layer5 | 1024 | 1 | Sigmoid | - |
 
 ### Design Choices
 
-- **Hardswish activation**: Used in early layers for better gradient flow
-- **ReLU activation**: Provides sparse representation in middle layers
-- **Sigmoid activation**: Used before final layer for probability output
-- **BatchNorm**: Applied after each layer to stabilize training
-- **Progressive expansion**: Network widens to 512 neurons before contracting to output
+- **LeakyReLU activation**: Used after dense layers to maintain gradient flow for negative inputs
+- **Sigmoid activation**: Used at the output for binary churn probability prediction
+- **BatchNorm**: Applied after the two intermediate wide layers to stabilize training
+- **Wide hidden layer**: The network expands to 1024 units in a bottleneck-style architecture for richer feature representation
 
 ## Data Preprocessing
 
@@ -112,19 +114,19 @@ The pipeline applies different transformations based on feature distributions. T
 
 ### Feature Groups and Transformations
 
-The original dataset has 14 columns. Two columns ('Status' and 'Complains') are dropped during preprocessing, leaving 11 features for the model.
+The original dataset has 14 columns. All features including 'Status' and 'Complains' are kept, resulting in 13 features for the model.
 
 | Scaler | Features | Rationale |
 |--------|----------|-----------|
-| **MinMaxScaler** | Tariff Plan | Binary/categorical with bounded values (0 or 1) |
+| **MinMaxScaler** | Tariff Plan, Status, Complains | Binary/categorical with bounded values (0 or 1) |
 | **StandardScaler** | Age Group, Age | Features following a normal/Gaussian distribution |
 | **PowerTransformer** | Call Failure, Subscription Length, Charge Amount, Seconds of Use, Frequency of use, Frequency of SMS, Distinct Called Numbers, Customer Value | Right-skewed distributions; PowerTransformer applies Yeo-Johnson transformation to make data more Gaussian-like |
-| **Dropped** | Status, Complains | Not used as features in the model |
+| **Dropped** | None | All features are used in the model |
 
 ### Preprocessing Pipeline
 
 1. **Load raw data**: Read from `data/raw/Customer Churn.csv`
-2. **Drop columns**: Remove 'Status' and 'Complains' columns (not used as features)
+2. **Keep all features**: All 13 features including 'Status' and 'Complains' are retained
 3. **Split data**: Train (70%) / Validation (15%) / Test (15%) using stratified sampling
 4. **Apply transformations**:
    - Fit transformers on training data only
@@ -161,7 +163,7 @@ The model is trained for multiple epochs with both training and validation metri
 
 ### Dataset Features
 
-The dataset contains 14 original columns. After dropping 'Status' and 'Complains' (as implemented in [src/preprocess.py](src/preprocess.py)), the model uses **11 input features** and 1 target variable (Churn).
+The dataset contains 14 original columns. All features are kept (including 'Status' and 'Complains'), resulting in **13 input features** and 1 target variable (Churn).
 
 #### Original Dataset Columns (14 total)
 | Feature | Description | Type |
@@ -177,11 +179,11 @@ The dataset contains 14 original columns. After dropping 'Status' and 'Complains
 | Tariff Plan | Customer's tariff plan | Binary (0/1) |
 | Age | Customer's age | Numeric |
 | Customer Value | Calculated customer value score | Numeric |
-| Status | Customer status (dropped) | Binary |
-| Complains | Customer complaints (dropped) | Binary |
+| Status | Customer status | Binary |
+| Complains | Customer complaints | Binary |
 | Churn | Target: 1 = churned, 0 = retained | Binary |
 
-#### Model Input Features (11 features)
+#### Model Input Features (13 features)
 The following features are used as model inputs after preprocessing:
 
 | Feature | Description | Transformation |
@@ -197,6 +199,8 @@ The following features are used as model inputs after preprocessing:
 | Frequency of SMS | SMS usage frequency | PowerTransformer |
 | Distinct Called Numbers | Number of unique contacts | PowerTransformer |
 | Customer Value | Calculated customer value score | PowerTransformer |
+| Status | Customer status | MinMaxScaler |
+| Complains | Customer complaints | MinMaxScaler |
 
 
 ## Evaluation Metrics

@@ -1,19 +1,22 @@
 import pandas as pd
-import numpy as np
+from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler, PowerTransformer, StandardScaler
 from sklearn.model_selection import train_test_split
 
-data = pd.read_csv(r"C:\Users\Administrator\Documents\Data_Science__Projects\Iranian_Telecom_Churn\data\raw\Customer Churn.csv")
-data = data.drop(['Status', 'Complains'], axis=1)
+BASE_PATH = Path(__file__).resolve().parents[1]
+data = pd.read_csv(BASE_PATH / "data" / "raw" / "Customer Churn.csv")
+# Keep all features including 'Status' and 'Complains'
 data.head()
 
-minmax = ['Tariff Plan']
+minmax = ['Tariff Plan', 'Status', 'Complains']
 standard = ['Age Group', 'Age']
 powerT = ['Call  Failure', 'Subscription  Length', 'Charge  Amount', 'Seconds of Use', 'Frequency of use', 
           'Frequency of SMS', 'Distinct Called Numbers', 'Customer Value']
+
 st = StandardScaler()
 pt = PowerTransformer()
 mm = MinMaxScaler()
+
 X = data.iloc[:, :-1]
 y = data.iloc[:, -1]
 X_train, X_sample, y_train, y_sample = train_test_split(X, y, test_size=0.3, stratify=y, random_state=222)
@@ -42,12 +45,12 @@ def transform_tv(data, minmax, mm, standard, st, powerT, pt):
 
 data_train = transform_tr(X_train, minmax, mm, standard, st, powerT, pt)
 data_train['Churn'] = y_train
-data_train.to_csv('data/processed/data_train.csv')
+data_train.to_csv(BASE_PATH / 'data' / 'processed' / 'data_train.csv')
 
 data_test = transform_tv(X_test, minmax, mm, standard, st, powerT, pt)
 data_test['Churn'] = y_test
-data_test.to_csv('data/processed/data_test.csv')
+data_test.to_csv(BASE_PATH / 'data' / 'processed' / 'data_test.csv')
 
 data_validation = transform_tv(X_val, minmax, mm, standard, st, powerT, pt)
 data_validation['Churn'] = y_val
-data_validation.to_csv('data/processed/data_validation.csv')
+data_validation.to_csv(BASE_PATH / 'data' / 'processed' / 'data_validation.csv')

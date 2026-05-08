@@ -3,4 +3,5 @@ numpy
 torch
 torchmetrics
 scikit-learn
+seaborn
 matplotlib

@@ -1,7 +1,8 @@
 import torch
 from torchmetrics import F1Score, Accuracy, Recall, Precision
-from dataset import test_loader
+from dataset import train_loader, BASE_PATH
 from module import ChurnModule
+import os
 
 f1_score = F1Score(task='binary')
 accuracy_score = Accuracy(task='binary')
@@ -9,11 +10,11 @@ recall_score = Recall(task='binary')
 precision_score = Precision(task='binary')
 
 model = ChurnModule()
-model.load_state_dict(torch.load(r'C:\Users\Administrator\Documents\Data_Science__Projects\Iranian_Telecom_Churn\models\Iranian_Telecom_Churn_model.pth'))
+model.load_state_dict(torch.load(os.path.join(BASE_PATH, 'models', 'Iranian_Telecom_Churn_CV_model.pth')))
 predictions = []
 model.eval()
 with torch.no_grad():
-    for features, labels in test_loader:
+    for features, labels in train_loader:
         outputs = model.forward(features)
 
         f1_score.update(outputs.squeeze(1), labels)
@@ -30,4 +31,4 @@ with torch.no_grad():
     precision = precision_score.compute().item()
     f1 = f1_score.compute().item()
 
-    print(f'Test -----> Accuracy - {accuracy*100:.2f}% -- F1 - {f1*100:.2f}% --Recall - {recall*100:.2f}% -- Precision - {precision*100:.2f}%')
+    print(f'Test -----> Accuracy - {accuracy*100:.2f}% | F1 - {f1*100:.2f}% | Recall - {recall*100:.2f}% | Precision - {precision*100:.2f}%')

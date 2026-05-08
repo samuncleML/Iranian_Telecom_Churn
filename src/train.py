@@ -1,8 +1,10 @@
+import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from torch.optim.lr_scheduler import StepLR
 from torchmetrics import F1Score, Accuracy, Recall, Precision
-from dataset import train_loader, val_loader
+from dataset import train_loader, val_loader, BASE_PATH
 from module import ChurnModule
 
 f1_score = F1Score(task='binary')
@@ -17,13 +19,14 @@ precision_score_ = Precision(task='binary')
 
 model = ChurnModule()
 criterion = nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.RMSprop(model.parameters(), lr=0.002)
+scheduler = StepLR(optimizer=optimizer, step_size=160, gamma=0.25)
 
-EPOCH = 150
+EPOCHS = 1500
 
-model.train()
-for i in range(1, EPOCH+1):
+for epoch in range(1, EPOCHS+1):
     running_loss = 0.0
+    print(f'EPOCH-{epoch}')
     for features, labels in train_loader:
         model.train()
         optimizer.zero_grad()
@@ -38,13 +41,15 @@ for i in range(1, EPOCH+1):
         running_loss += loss.item()
         loss.backward()
         optimizer.step()
+        scheduler.step()
+        
 
     accuracy = accuracy_score.compute().item()
     recall = recall_score.compute().item()
     precision = precision_score.compute().item()
     f1 = f1_score.compute().item()
-    print(f'Train ----------> Epoch {i} -- Loss {(running_loss/len(train_loader)):.2f} -- Accuracy - {accuracy*100:.2f}% -- F1 - {f1*100:.2f}% --Recall - {recall*100:.2f}% -- Precision - {precision*100:.2f}%')
-
+    print('='*100)
+    print(f'Train ----------> Epoch {epoch} | Loss {(running_loss/len(train_loader)):.2f} | Accuracy-{accuracy*100:.2f}% | F1-{f1*100:.2f}% | Recall-{recall*100:.2f}% | Precision-{precision*100:.2f}%')
 
     model.eval()
     with torch.no_grad():
@@ -59,11 +64,10 @@ for i in range(1, EPOCH+1):
             precision_score_.update(output.squeeze(1), label)
 
             running_loss += loss.item()
-            optimizer.step()
 
-        accuracy = accuracy_score.compute().item()
-        recall = recall_score.compute().item()
-        precision = precision_score.compute().item()
-        f1 = f1_score.compute().item()
-    print(f'Validation -----> Loss {(running_loss/len(val_loader)):.2f} -- Accuracy - {accuracy*100:.2f}% -- F1 - {f1*100:.2f}% --Recall - {recall*100:.2f}% -- Precision - {precision*100:.2f}%')
-torch.save(model.state_dict(), 'Iranian_Telecom_Churn_model.pth')
+        accuracy = accuracy_score_.compute().item()
+        recall = recall_score_.compute().item()
+        precision = precision_score_.compute().item()
+        f1 = f1_score_.compute().item()
+    print(f'Validation -----> Loss {(running_loss/len(val_loader)):.2f} | Accuracy - {accuracy*100:.2f}% | F1 - {f1*100:.2f}% | Recall - {recall*100:.2f}% | Precision - {precision*100:.2f}%')
+torch.save(model.state_dict(), os.path.join(BASE_PATH, 'models', 'Iranian_Telecom_Churn_model_.pth'))

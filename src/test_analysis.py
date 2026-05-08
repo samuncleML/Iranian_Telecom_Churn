@@ -1,10 +1,12 @@
 from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, f1_score, confusion_matrix, classification_report, precision_score, recall_score
 from matplotlib import pyplot as plt
 import seaborn as sns
+from pathlib import Path
 from test import predictions
 import pandas as pd
 
-y_test = pd.read_csv(r'C:\Users\Administrator\Documents\Data_Science__Projects\Iranian_Telecom_Churn\data\processed\data_test.csv')['Churn']
+BASE_PATH = Path(__file__).resolve().parents[1]
+y_test = pd.read_csv(BASE_PATH / 'data' / 'processed' / 'data_train.csv')['Churn']
 model_prediction = predictions
 
 accuracy = accuracy_score(y_test, model_prediction)
