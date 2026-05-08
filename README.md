@@ -176,7 +176,7 @@ The training loop in [src/train.py](src/train.py) performs:
 
 ## Model Performance Visualization
 
-![ROC Curve and Confusion Matrix](notebooks/ROC_Confusion_Matrix.png)
+<img width="1954" height="975" alt="image" src="https://github.com/user-attachments/assets/2508767a-ffdf-4858-bbd6-7624402e6f62" />
 
 ### Model Evaluation: ROC Curve & Confusion Matrix
 
@@ -193,7 +193,7 @@ The chart and confusion matrix summarize the model's performance on the test set
 | F1 Score   |  94.52 % |
 | Recall     |  93.24 % |
 | Precision  |  95.83 % |
-| ROC AUC    | 0.9902 |
+| ROC AUC    |  99.02 % |
 
 ## Requirements
 
