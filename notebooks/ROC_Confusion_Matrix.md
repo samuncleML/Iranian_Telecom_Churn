@@ -10,6 +10,6 @@ The following figure illustrates the model's performance on the test set using t
   - The confusion matrix provides a summary of prediction results, showing the counts of true positives, true negatives, false positives, and false negatives.
   - This helps visualize the model's accuracy and the types of errors it makes.
 
-![ROC Curve and Confusion Matrix](notebooks/ROC_Confusion_Matrix.png)
+<img width="1954" height="975" alt="image" src="https://github.com/user-attachments/assets/7c04cf31-594c-442e-9257-3dba129473ae" />
 
 In this project, the model achieves a high AUC and demonstrates strong classification performance, as seen in the confusion matrix. This indicates the model is effective at identifying customers who are likely to churn.
