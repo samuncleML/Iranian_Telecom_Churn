@@ -1,4 +1,4 @@
-# Iranian Telecom Churn Prediction
+﻿# Iranian Telecom Churn Prediction
 
 A machine learning pipeline for predicting customer churn in the Iranian telecommunications sector. This project implements a deep neural network model trained on customer data to identify customers likely to cancel their subscriptions.
 
@@ -11,19 +11,22 @@ Iranian_Telecom_Churn/
 │   │   ├── data_train.csv
 │   │   ├── data_test.csv
 │   │   └── data_validation.csv
-│   └── raw/               # Original dataset
-│       └── Customer Churn.csv
+│   ├── raw/               # Original dataset
+│   │   └── Customer Churn.csv
+│   └── cross_val_data/    # Four cross-validation partitions
 ├── models/                # Trained model checkpoints
 │   └── Iranian_Telecom_Churn_model.pth
 ├── notebooks/             # Jupyter notebooks
 │   ├── EDA.ipynb          # Exploratory Data Analysis
-│   └── Iranian_Telecom_Churn_Pipeline.ipynb  # Full pipeline
+│   ├── Iranian_Telecom_Churn_Pipeline.ipynb  # Full pipeline
+│   └── ROC_Confusion_Matrix.md
 ├── src/                   # Source code
 │   ├── __init__.py
-│   ├── dataset.py         # PyTorch Dataset class
+│   ├── cross_val.py       # Cross-validation workflow
+│   ├── dataset.py         # PyTorch Dataset class and data loaders
 │   ├── module.py          # Neural network model
 │   ├── preprocess.py      # Data preprocessing
-│   ├── train.py           # Training script
+│   ├── train.py           # Training utilities
 │   ├── test.py            # Testing script
 │   └── test_analysis.py   # Analysis tools
 ├── main.py                # CLI entry point
@@ -38,10 +41,10 @@ git clone <repository-url>
 cd Iranian_Telecom_Churn
 ```
 
-2. Create a virtual environment (optional but recommended):
+2. Create a virtual environment (recommended):
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+venv\Scripts\activate
 ```
 
 3. Install dependencies:
@@ -68,17 +71,22 @@ Run full pipeline (train + evaluate):
 python main.py full
 ```
 
+The CLI supports custom model save/load paths, so you can run the pipeline on different machines without changing code.
+
+## Windows Compatibility
+
+This pipeline is compatible with every Windows machine. It uses flexible relative path handling across the repository, including os.path.join, os.path.dirname(__file__), and configurable model and data paths. That means the model pipeline can run reliably on Windows without hard-coded file locations.
+
 ## Cross-Validation
 
 The project includes a 4-fold cross-validation workflow to improve model robustness and reduce sensitivity to a single train/validation split.
 
-- Implemented in `src/cross_val.py`
-- Uses the four partition files in `data/cross_val_data/`
+- Implemented in src/cross_val.py
+- Uses the four partition files in data/cross_val_data/
 - Each fold trains on three partitions and validates on the remaining partition
-- Produces cross-validated validation metrics across all four folds
-- Helps estimate model performance more reliably than a single hold-out set
+- Produces robust cross-validated validation metrics
 
-### Jupyter Notebooks
+## Jupyter Notebooks
 
 Open the notebooks for interactive exploration:
 
@@ -110,98 +118,54 @@ The model takes 13 input features (all features including 'Status' and 'Complain
 
 ## Data Preprocessing
 
-The pipeline applies different transformations based on feature distributions. The preprocessing is implemented in [src/preprocess.py](src/preprocess.py) and can also be run interactively in the [EDA.ipynb](notebooks/EDA.ipynb) notebook.
+The pipeline applies different transformations based on feature distributions. The preprocessing is implemented in [src/preprocess.py](src/preprocess.py) and can also be explored in [notebooks/EDA.ipynb](notebooks/EDA.ipynb).
 
 ### Feature Groups and Transformations
 
-The original dataset has 14 columns. All features including 'Status' and 'Complains' are kept, resulting in 13 features for the model.
+The original dataset has 14 columns. All features including 'Status' and 'Complains' are kept, resulting in 13 model inputs.
 
 | Scaler | Features | Rationale |
 |--------|----------|-----------|
-| **MinMaxScaler** | Tariff Plan, Status, Complains | Binary/categorical with bounded values (0 or 1) |
-| **StandardScaler** | Age Group, Age | Features following a normal/Gaussian distribution |
-| **PowerTransformer** | Call Failure, Subscription Length, Charge Amount, Seconds of Use, Frequency of use, Frequency of SMS, Distinct Called Numbers, Customer Value | Right-skewed distributions; PowerTransformer applies Yeo-Johnson transformation to make data more Gaussian-like |
-| **Dropped** | None | All features are used in the model |
+| **MinMaxScaler** | Tariff Plan, Status, Complains | Binary/categorical with bounded values |
+| **StandardScaler** | Age Group, Age | Features that resemble a normal distribution |
+| **PowerTransformer** | Call Failure, Subscription Length, Charge Amount, Seconds of Use, Frequency of use, Frequency of SMS, Distinct Called Numbers, Customer Value | Right-skewed numeric features benefit from Yeo-Johnson transformation |
+| **Dropped** | None | All available features are used in the model |
 
 ### Preprocessing Pipeline
 
-1. **Load raw data**: Read from `data/raw/Customer Churn.csv`
-2. **Keep all features**: All 13 features including 'Status' and 'Complains' are retained
+1. **Load raw data**: Read from data/raw/Customer Churn.csv
+2. **Keep all features**: All 13 model inputs including 'Status' and 'Complains' are retained
 3. **Split data**: Train (70%) / Validation (15%) / Test (15%) using stratified sampling
-4. **Apply transformations**:
+4. **Transform data**:
    - Fit transformers on training data only
-   - Apply same transformations to validation and test data
-5. **Save processed data**: Export to `data/processed/` directory
+   - Apply identical transforms to validation and test sets
+5. **Save processed data**: Export to data/processed/
 
 ### Transformation Details
 
-- **MinMaxScaler**: Scales features to [0, 1] range. Used for binary/categorical features where the relative distribution is already uniform.
-- **StandardScaler**: Standardizes features by removing mean and scaling to unit variance (z-score normalization). Used for features that follow a normal distribution.
-- **PowerTransformer**: Applies Yeo-Johnson transformation to make data more Gaussian-like. This is particularly effective for right-skewed features common in telecom data (e.g., call duration, charges).
+- **MinMaxScaler**: Scales binary/categorical fields to [0, 1]
+- **StandardScaler**: Standardizes continuous features by removing the mean and scaling to unit variance
+- **PowerTransformer**: Applies a Yeo-Johnson transformation to reduce skew and make numeric data more Gaussian-like
 
 ## Training Configuration
 
 - **Optimizer**: Adam
 - **Initial Learning Rate**: 0.001
-- **Scheduler**: StepLR (gamma=0.02, step_size=7) - Learning rate is multiplied by 0.02 every 7 epochs
+- **Scheduler**: StepLR (gamma=0.02, step_size=7)
 - **Loss Function**: Binary Cross-Entropy (BCE)
 - **Batch Size**: 32
 - **Train/Validation/Test Split**: 70% / 15% / 15%
 
 ### Training Process
 
-The training loop (implemented in [src/train.py](src/train.py)) performs:
+The training loop in [src/train.py](src/train.py) performs:
 
-1. **Forward pass**: Compute model predictions
-2. **Loss calculation**: BCE loss between predictions and ground truth
+1. **Forward pass**: Compute predictions
+2. **Loss calculation**: BCE loss between predictions and labels
 3. **Backward pass**: Compute gradients
-4. **Optimization step**: Update model weights using Adam optimizer
-5. **Learning rate scheduling**: StepLR reduces LR by factor of 0.02 after every 7 epochs
-6. **Metrics computation**: Track accuracy, F1 score, recall, and precision
-
-The model is trained for multiple epochs with both training and validation metrics logged at each epoch to monitor overfitting.
-
-### Dataset Features
-
-The dataset contains 14 original columns. All features are kept (including 'Status' and 'Complains'), resulting in **13 input features** and 1 target variable (Churn).
-
-#### Original Dataset Columns (14 total)
-| Feature | Description | Type |
-|---------|-------------|------|
-| Call Failure | Number of call failures | Numeric |
-| Subscription Length | Length of subscription (months) | Numeric |
-| Charge Amount | Amount charged | Numeric |
-| Seconds of Use | Total seconds of use | Numeric |
-| Frequency of use | How often the service is used | Numeric |
-| Frequency of SMS | SMS usage frequency | Numeric |
-| Distinct Called Numbers | Number of unique contacts | Numeric |
-| Age Group | Customer's age group | Numeric |
-| Tariff Plan | Customer's tariff plan | Binary (0/1) |
-| Age | Customer's age | Numeric |
-| Customer Value | Calculated customer value score | Numeric |
-| Status | Customer status | Binary |
-| Complains | Customer complaints | Binary |
-| Churn | Target: 1 = churned, 0 = retained | Binary |
-
-#### Model Input Features (13 features)
-The following features are used as model inputs after preprocessing:
-
-| Feature | Description | Transformation |
-|---------|-------------|----------------|
-| Tariff Plan | Customer's tariff plan | MinMaxScaler |
-| Age Group | Customer's age group | StandardScaler |
-| Age | Customer's age | StandardScaler |
-| Call Failure | Number of call failures | PowerTransformer |
-| Subscription Length | Length of subscription (months) | PowerTransformer |
-| Charge Amount | Amount charged | PowerTransformer |
-| Seconds of Use | Total seconds of use | PowerTransformer |
-| Frequency of use | How often the service is used | PowerTransformer |
-| Frequency of SMS | SMS usage frequency | PowerTransformer |
-| Distinct Called Numbers | Number of unique contacts | PowerTransformer |
-| Customer Value | Calculated customer value score | PowerTransformer |
-| Status | Customer status | MinMaxScaler |
-| Complains | Customer complaints | MinMaxScaler |
-
+4. **Optimization step**: Update model weights with Adam
+5. **Learning rate scheduling**: Reduce the learning rate every 7 epochs
+6. **Metrics computation**: Track accuracy, F1, recall, and precision
 
 ## Evaluation Metrics
 
@@ -210,24 +174,16 @@ The following features are used as model inputs after preprocessing:
 - Recall
 - Precision
 
-
 ## Model Performance Visualization
 
 ![ROC Curve and Confusion Matrix](notebooks/ROC_Confusion_Matrix.png)
 
 ### Model Evaluation: ROC Curve & Confusion Matrix
 
-The figure above summarizes the model's performance on the test set:
+The chart and confusion matrix summarize the model's performance on the test set:
 
-- **ROC Curve (Receiver Operating Characteristic):**
-   - Plots the True Positive Rate (TPR) vs. False Positive Rate (FPR) at various thresholds.
-   - The Area Under the Curve (AUC) quantifies the model's ability to distinguish between churn and non-churn customers. An AUC close to 1.0 indicates excellent discrimination.
-
-- **Confusion Matrix:**
-   - Shows the counts of true positives, true negatives, false positives, and false negatives.
-   - Helps visualize the model's accuracy and the types of errors it makes.
-
-In this project, the model achieves a high AUC and demonstrates strong classification performance, as seen in the confusion matrix. This indicates the model is effective at identifying customers who are likely to churn.
+- **ROC Curve**: Measures the model's ability to distinguish churn vs retained customers
+- **Confusion Matrix**: Visualizes true/false positives and negatives
 
 ### Test Set Performance Metrics
 
@@ -237,7 +193,7 @@ In this project, the model achieves a high AUC and demonstrates strong classific
 | F1 Score   |  94.52 % |
 | Recall     |  93.24 % |
 | Precision  |  95.83 % |
-| ROC AUC    | ~100.0 % |
+| ROC AUC    | 0.9902 |
 
 ## Requirements
 
