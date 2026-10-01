@@ -37,7 +37,7 @@ Iranian_Telecom_Churn/
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone [<repository-url>](https://github.com/samuncleML/Iranian_Telecom_Churn.git)
 cd Iranian_Telecom_Churn
 ```
 
