@@ -43,7 +43,7 @@ cd Iranian_Telecom_Churn
 
 2. Create a virtual environment (recommended):
 ```bash
-python -m venv venv
+python -m venv .venv
 venv\Scripts\activate
 ```
 
